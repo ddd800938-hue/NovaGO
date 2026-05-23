@@ -4,9 +4,9 @@ import {
   ArrowLeft, Star, Heart, Play, ChevronLeft, ChevronRight,
   Info, BookOpen, Calendar, Tv
 } from 'lucide-react';
-import type { WatchingAnime } from '../types/anime';
+import type { WatchingAnime, PlayerType } from '../types/anime';
 import { useFavorites, useNavigation, useHistory } from '../store/useStore';
-import { getAnimeById } from '../api/jikan';
+import { getAnimeById, buildPlayerUrl } from '../api/shikimori';
 
 interface Props {
   watching: WatchingAnime;
@@ -21,6 +21,8 @@ export default function WatchPage({ watching }: Props) {
   const [episode, setEpisode] = useState(watching.episode);
   const [season] = useState(watching.season);
   const [activeTab, setActiveTab] = useState<'info' | 'episodes'>('info');
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerType>('cvh');
+  const [playerError, setPlayerError] = useState(false);
 
   const fav = isFavorite(anime.mal_id);
   const title = anime.title_english || anime.title;
@@ -36,11 +38,15 @@ export default function WatchPage({ watching }: Props) {
   // Track history
   useEffect(() => {
     addToHistory({ anime, episode, season });
-  }, [anime.mal_id, episode, season]);
+  }, [anime.mal_id, episode, season, addToHistory]);
 
-  // CVH/vidsrc player URL
-  // Using vidsrc.cc which supports anime via MAL IDs
-  const playerUrl = `https://vidsrc.cc/v2/embed/anime/${anime.mal_id}/${season}/${episode}?autoPlay=true&color=9333ea`;
+  // Get player URL based on selected player
+  const playerUrl = buildPlayerUrl(anime.mal_id, episode, season, selectedPlayer);
+  const players: { type: PlayerType; name: string; icon: string }[] = [
+    { type: 'cvh', name: 'CVH', icon: '🎬' },
+    { type: 'kodik', name: 'Kodik', icon: '▶️' },
+    { type: 'alloha', name: 'Alloha', icon: '🎞️' },
+  ];
 
   const episodeNumbers = Array.from({ length: Math.min(totalEpisodes, 200) }, (_, i) => i + 1);
 
@@ -58,6 +64,27 @@ export default function WatchPage({ watching }: Props) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+        {/* Player selector tabs */}
+        <div className="mb-4 flex gap-2 flex-wrap">
+          {players.map(player => (
+            <button
+              key={player.type}
+              onClick={() => {
+                setSelectedPlayer(player.type);
+                setPlayerError(false);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                selectedPlayer === player.type
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/30'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+              }`}
+            >
+              <span>{player.icon}</span>
+              {player.name}
+            </button>
+          ))}
+        </div>
+
         {/* Player */}
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
@@ -66,15 +93,24 @@ export default function WatchPage({ watching }: Props) {
           className="relative rounded-2xl overflow-hidden shadow-2xl shadow-purple-900/20 mb-6"
           style={{ background: '#000' }}
         >
+          {playerError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+              <div className="text-center">
+                <p className="text-white mb-2">Player not available</p>
+                <p className="text-sm text-gray-400">Try another player</p>
+              </div>
+            </div>
+          )}
           <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
             <iframe
-              key={`${anime.mal_id}-${season}-${episode}`}
+              key={`${anime.mal_id}-${season}-${episode}-${selectedPlayer}`}
               src={playerUrl}
               className="absolute inset-0 w-full h-full"
               allowFullScreen
               allow="autoplay; fullscreen"
-              referrerPolicy="origin"
+              referrerPolicy="no-referrer"
               style={{ border: 'none' }}
+              onError={() => setPlayerError(true)}
             />
           </div>
         </motion.div>

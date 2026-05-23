@@ -62,6 +62,15 @@ export interface User {
 
 export type Page = 'home' | 'search' | 'watch' | 'favorites' | 'profile' | 'auth';
 
+export type PlayerType = 'kodik' | 'alloha' | 'cvh';
+
+export interface PlayerLink {
+  type: PlayerType;
+  url: string;
+  name: string;
+  icon?: string;
+}
+
 export interface WatchingAnime {
   anime: Anime;
   episode: number;

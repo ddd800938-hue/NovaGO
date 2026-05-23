@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Play, TrendingUp, Sparkles, Clock, ChevronRight, Star } from 'lucide-react';
-import { getTopAnime, getSeasonalAnime } from '../api/jikan';
+import { getTopAnime, getSeasonalAnime } from '../api/shikimori';
 import type { Anime } from '../types/anime';
 import AnimeCard from '../components/AnimeCard';
 import { useNavigation, useHistory } from '../store/useStore';

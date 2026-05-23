@@ -7,14 +7,23 @@ async function delay(ms: number) {
 }
 
 async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  let lastError: Error | null = null;
   for (let i = 0; i < retries; i++) {
-    const res = await fetch(url);
-    if (res.status === 429) {
-      await delay(1200 * (i + 1));
-      continue;
+    try {
+      const res = await fetch(url);
+      if (res.status === 429) {
+        await delay(1200 * (i + 1));
+        continue;
+      }
+      return res;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (i < retries - 1) {
+        await delay(1000 * (i + 1));
+      }
     }
-    return res;
   }
+  if (lastError) throw lastError;
   throw new Error('Too many requests');
 }
 

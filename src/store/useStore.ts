@@ -106,7 +106,7 @@ export function useFavorites() {
 
   const isFavorite = useCallback((mal_id: number): boolean => {
     return _favorites.some(a => a.mal_id === mal_id);
-  }, [favorites]);
+  }, []);
 
   const toggleFavorite = useCallback((anime: Anime) => {
     if (_favorites.find(a => a.mal_id === anime.mal_id)) {
@@ -114,7 +114,7 @@ export function useFavorites() {
     } else {
       addFavorite(anime);
     }
-  }, [favorites, addFavorite, removeFavorite]);
+  }, [addFavorite, removeFavorite]);
 
   return { favorites, addFavorite, removeFavorite, isFavorite, toggleFavorite };
 }

@@ -18,8 +18,9 @@ export default function ProfilePage() {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const avgScore = favorites.length > 0
-    ? (favorites.reduce((s, a) => s + (a.score || 0), 0) / favorites.filter(a => a.score).length).toFixed(1)
+  const favoritesWithScore = favorites.filter(a => a.score);
+  const avgScore = favoritesWithScore.length > 0
+    ? (favoritesWithScore.reduce((s, a) => s + (a.score || 0), 0) / favoritesWithScore.length).toFixed(1)
     : '—';
 
   return (

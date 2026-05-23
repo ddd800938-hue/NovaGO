@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, Loader2, TrendingUp } from 'lucide-react';
-import { searchAnime, getTopAnime, getAnimeByGenre } from '../api/jikan';
+import { searchAnime, getTopAnime, getAnimeByGenre } from '../api/shikimori';
+import { useDebounce } from '../hooks/useDebounce';
 import type { Anime } from '../types/anime';
 import AnimeCard from '../components/AnimeCard';
 
@@ -30,46 +31,48 @@ export default function SearchPage() {
   const [trending, setTrending] = useState<Anime[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Используем debounce для поиска (задержка 300мс)
+  const debouncedQuery = useDebounce(query, 300);
+  const debouncedGenre = useDebounce(selectedGenre, 300);
+
   // Load trending on mount
   useEffect(() => {
     getTopAnime(1, 20).then(setTrending);
   }, []);
 
-  const doSearch = useCallback(async (q: string, p: number, genreId: number | null) => {
-    setLoading(true);
-    try {
-      if (q.trim()) {
-        const { results: res, total: t } = await searchAnime(q, p);
-        setResults(p === 1 ? res : prev => [...prev, ...res]);
-        setTotal(t);
-      } else if (genreId !== null) {
-        const res = await getAnimeByGenre(genreId, p);
-        setResults(p === 1 ? res : prev => [...prev, ...res]);
-        setTotal(999);
-      } else {
-        setResults([]);
-        setTotal(0);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Debounced search
+  // Выполняем поиск когда debounced значения меняются
   useEffect(() => {
     setPage(1);
-    if (!query.trim() && selectedGenre === null) {
+    if (!debouncedQuery.trim() && debouncedGenre === null) {
       setResults([]);
       setTotal(0);
       return;
     }
-    const timer = setTimeout(() => {
-      doSearch(query, 1, selectedGenre);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [query, selectedGenre, doSearch]);
+    
+    const performSearch = async () => {
+      setLoading(true);
+      try {
+        if (debouncedQuery.trim()) {
+          const { results: res, total: t } = await searchAnime(debouncedQuery, 1);
+          setResults(res);
+          setTotal(t);
+        } else if (debouncedGenre !== null) {
+          const res = await getAnimeByGenre(debouncedGenre, 1);
+          setResults(res);
+          setTotal(999);
+        } else {
+          setResults([]);
+          setTotal(0);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    performSearch();
+  }, [debouncedQuery, debouncedGenre]);
 
   const handleGenre = (id: number) => {
     if (selectedGenre === id) {
@@ -80,10 +83,25 @@ export default function SearchPage() {
     }
   };
 
-  const loadMore = () => {
+  const loadMore = async () => {
     const next = page + 1;
     setPage(next);
-    doSearch(query, next, selectedGenre);
+    setLoading(true);
+    try {
+      if (query.trim()) {
+        const { results: res, total: t } = await searchAnime(query, next);
+        setResults(prev => [...prev, ...res]);
+        setTotal(t);
+      } else if (selectedGenre !== null) {
+        const res = await getAnimeByGenre(selectedGenre, next);
+        setResults(prev => [...prev, ...res]);
+        setTotal(999);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hasResults = results.length > 0;
